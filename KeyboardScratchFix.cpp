@@ -63,10 +63,12 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 			setBit(holdingState, 0x01, 1);
 			if(holdingState & 0x08)
 			{
+				Sleep(1);
 				release();
 				isClockwise = !isClockwise;
+				Sleep(1);
 				press();
-				cout << "L pressed earlier, change state" << endl;
+				//cout << "L pressed earlier, change state" << endl;
 				setBit(holdingState, 0x08, 0);
 				setBit(holdingState, 0x04, 1);
 			}
@@ -82,10 +84,12 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 			setBit(holdingState, 0x02, 1);
 			if(holdingState & 0x04)
 			{
+				Sleep(1);
 				release();
 				isClockwise = !isClockwise;
+				Sleep(1);
 				press();
-				cout << "A pressed earlier, change state" << endl;
+				//cout << "A pressed earlier, change state" << endl;
 				setBit(holdingState, 0x04, 0);
 				setBit(holdingState, 0x08, 1);
 			}
@@ -96,6 +100,9 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 			}
 			return 1;		// 使按键失效
 			break;
+		//case 0x52: //debug line
+			//cout << "--------" << endl;
+			//break;
     	}
 	}
     if(ks->flags == 128 || ks->flags == 129)
@@ -178,12 +185,15 @@ void press()
 	{
 		keybd_event(0x4C,0,0,0);
 	}
+#ifdef DEBUG
+	cout << "hit" << endl;
+#endif
 }
 
 void release()
 {
 	keybd_event(0x4C,0,KEYEVENTF_KEYUP,0);
-	keybd_event(0x4C,0,KEYEVENTF_KEYUP,0);
+	//keybd_event(0x4C,0,KEYEVENTF_KEYUP,0);
 	//if(isClockwise == true)
 	//{
 		//keybd_event(0x41,0,KEYEVENTF_KEYUP,0);
@@ -206,6 +216,6 @@ void setBit(T& value, int bit, int set)
 		value = value & ~bit;
 	}
 #ifdef DEBUG
-	cout << value << endl;
+	//cout << value << endl;
 #endif
 }
