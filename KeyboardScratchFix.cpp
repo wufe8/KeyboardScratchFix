@@ -7,12 +7,17 @@
 
 using namespace std;
 
-#define DEBUG
+//#define DEBUG
 
 void press();
 void release();
 template<typename T>
 void setBit(T& value, int bit, int set);
+
+HHOOK keyboardHook = 0; // 钩子句柄
+int holdingState = 0; //0x01 按下A, 0x02 按下L, 0x04 先按下A, 0x08 先按下L
+bool isClockwise = true; //单键输出下用不着 双键输出用于判断状态
+string bindKey = "ALL"; //前面为输入 后面为输出 0为留空
 
 //HHOOK SetWindowsHookEx(int idHook, HOOKPPROC lpfn, HINSTANCE hMod, DWORD dwThreadId); // 钩子安装(钩子类型,钩子过程的指针, 应用程序实例的曲柄, 要安装的钩子线程id)
 //LRESULT CALLBACK HookProc(int nCode, WPARAM wParam, LPARAM lParam); //钩子过程(钩子标识码 决定下一步操作, 依赖nCode参数的内容, 依赖nCode参数的内容)
@@ -33,10 +38,6 @@ void setBit(T& value, int bit, int set);
 
 //代码改自: https://www.cnblogs.com/LyShark/p/15019694.html
 
-HHOOK keyboardHook = 0;		// 钩子句柄
-int holdingState = 0; //0x01 按下A, 0x02 按下L, 0x04 先按下A, 0x08 先按下L
-bool isClockwise = true;
-
 LRESULT CALLBACK LowLevelKeyboardProc(
 	int nCode,		// 规定钩子如何处理消息，小于 0 则直接 CallNextHookEx
 	WPARAM wParam,	// 消息类型
@@ -56,19 +57,18 @@ LRESULT CALLBACK LowLevelKeyboardProc(
     if(ks->flags == 0)
     {
 		// 监控键盘
-		switch(ks->vkCode)
+		if(ks->vkCode == bindKey[0])
 		{
-		case 0x41:
-			//cout << "Detect input: " << "A" << endl;
+			//cout << "Detect input: " << "A" << "\n";
 			setBit(holdingState, 0x01, 1);
 			if(holdingState & 0x08)
 			{
-				Sleep(1);
+				Sleep(1); //1ms余量防止游戏不识别
 				release();
-				isClockwise = !isClockwise;
+				isClockwise = !isClockwise; //同时按下则立即切换
 				Sleep(1);
 				press();
-				//cout << "L pressed earlier, change state" << endl;
+				cout << "duplicate state, " << "'" << bindKey[1] << "'" << " earlier" << "\n";
 				setBit(holdingState, 0x08, 0);
 				setBit(holdingState, 0x04, 1);
 			}
@@ -78,9 +78,10 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 				press();
 			}
 			return 1;		// 使按键失效
-			break;
-		case 0x4C:
-			//cout << "Detect input: " << "L" << endl;
+		}
+		else if(ks->vkCode == bindKey[1])
+		{
+			//cout << "Detect input: " << "L" << "\n";
 			setBit(holdingState, 0x02, 1);
 			if(holdingState & 0x04)
 			{
@@ -89,7 +90,7 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 				isClockwise = !isClockwise;
 				Sleep(1);
 				press();
-				//cout << "A pressed earlier, change state" << endl;
+				cout << "duplicate state, " << "'" << bindKey[0] << "'" << " earlier" << "\n";
 				setBit(holdingState, 0x04, 0);
 				setBit(holdingState, 0x08, 1);
 			}
@@ -99,31 +100,35 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 				press();
 			}
 			return 1;		// 使按键失效
-			break;
 		//case 0x52: //debug line
-			//cout << "--------" << endl;
+			//cout << "--------" << "\n";
 			//break;
     	}
 	}
     if(ks->flags == 128 || ks->flags == 129)
     {
 		// 监控键盘
-		switch(ks->vkCode)
+		if(ks->vkCode == bindKey[0])
 		{
-		case 0x41:
-			//cout << "Release input: " << "A" << endl;
 			setBit(holdingState, 0x01, 0);
 			setBit(holdingState, 0x04, 0);
-			release();
-			isClockwise = !isClockwise; //注意由于bool实际存储仍然为1Byte 即bool true为0x00000001 因此不可用位取反
-			break;
-		case 0x4C:
-			//cout << "Release input: " << "L" << endl;
+			if(not holdingState & 0x01)
+			{
+				release();
+				cout << "release" << "'" << bindKey[0] << "'" << "\n";
+				isClockwise = !isClockwise; //注意由于bool实际存储仍然为1Byte 即bool true为0x00000001 因此不可用位取反
+			}
+		}
+		else if(ks->vkCode == bindKey[1])
+		{
 			setBit(holdingState, 0x02, 0);
 			setBit(holdingState, 0x08, 0);
-			release();
-			isClockwise = !isClockwise; //注意由于bool实际存储仍然为1Byte 即bool true为0x00000001 因此不可用位取反
-			break;
+			if(not holdingState & 0x01)
+			{
+				release();
+				cout << "release" << "'" << bindKey[1] << "'" << "\n";
+				isClockwise = !isClockwise; //注意由于bool实际存储仍然为1Byte 即bool true为0x00000001 因此不可用位取反
+			}
         //return 1;		// 使按键失效
     	}
 	}
@@ -133,9 +138,24 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 
 int main(int argc, char* argv[])
 {
+	cout << "Another: Wufe8; 2023-01-08" << "\n"
+	<< "Use two key to do as one single key" << "\n"
+	<< "Some app which run as admin. must run this program as admin first. Otherwise the hook cannot catch and do keyboard event" << "\n"
+	<< "To change bind key, edit 'bind.ini', first two char means input and third char means output. If invalid, try capital letters" << "\n"
+	<< "--------------" << "\n";
 	// 读取按键配置
 	fstream cfgFile;
 	cfgFile.open("bind.ini");
+	if (cfgFile.is_open())
+	{
+		cfgFile >> bindKey;
+		cout << "[I]'" << bindKey[0] << "'" << ", " << "'" << bindKey[1] << "'" << " represent " << "'" << bindKey[2] << "'" << "\n";
+		
+	}
+	else
+	{
+		cout << "[W] failed to open bind.ini, using default binding: 'A', 'L' represent 'L'" << "\n"; 
+	}
 	cfgFile.close();
 	
 	// 安装钩子
@@ -145,7 +165,12 @@ int main(int argc, char* argv[])
 		GetModuleHandleA(NULL),	// Dll 句柄
 		0					
 		);
-    if (keyboardHook == 0){cout << "挂钩键盘失败" << endl; return -1;}
+    if (keyboardHook == 0)
+	{
+		cout << "[E] Fail to set keyboard hook" << "\n";
+		return -1;
+	}
+	cout << "[I] Successfully initialized" << "\n";
 
     //不可漏掉消息处理，不然程序会卡死
     MSG msg;
@@ -179,28 +204,26 @@ void press()
 {
 	if(isClockwise == true)
 	{
-		keybd_event(0x4C,0,0,0);
+		keybd_event(bindKey[2],0,0,0);
 	}
 	else
 	{
-		keybd_event(0x4C,0,0,0);
+		keybd_event(bindKey[2],0,0,0);
 	}
-#ifdef DEBUG
-	cout << "hit" << endl;
-#endif
+	cout << "hit" << "\n";
 }
 
 void release()
 {
-	keybd_event(0x4C,0,KEYEVENTF_KEYUP,0);
-	//keybd_event(0x4C,0,KEYEVENTF_KEYUP,0);
+	keybd_event(bindKey[2],0,KEYEVENTF_KEYUP,0);
+	//keybd_event(bindKey[3],0,KEYEVENTF_KEYUP,0);
 	//if(isClockwise == true)
 	//{
-		//keybd_event(0x41,0,KEYEVENTF_KEYUP,0);
+		//keybd_event(bind[2],0,KEYEVENTF_KEYUP,0);
 	//}
 	//else
 	//{
-		//keybd_event(0x4C,0,KEYEVENTF_KEYUP,0);
+		//keybd_event(bindKey[3],0,KEYEVENTF_KEYUP,0);
 	//}
 }
 
@@ -216,6 +239,7 @@ void setBit(T& value, int bit, int set)
 		value = value & ~bit;
 	}
 #ifdef DEBUG
-	//cout << value << endl;
+	cout << value << "\n";
 #endif
 }
+
