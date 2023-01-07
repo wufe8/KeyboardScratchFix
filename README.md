@@ -16,5 +16,5 @@ Tested to work on OSU! and ______
 3. **Although it only uses the keyboard reading and writing of windows native api, it has no any effect on the game, but I'm not sure if it can be detected**
 ---
 1. 需要管理员身份运行的应用程序 必须以管理员身份运行此程序 否则钩子抓不到键盘事件
-2. 要更改绑定密钥，编辑'bind.ini' 如果不存在，创建一个。 前两个 char 表示输入，第三个 chopen bind.ini。
+2. 关于修改按键: 创建'bind.ini' 里面前两个字母表示输入 第三个字母表示输出
 3. **尽管只使用了windows原生api的键盘读写 对游戏没有任何影响 但我不确定能否被检测到**
