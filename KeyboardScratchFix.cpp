@@ -18,12 +18,12 @@ void setBit(T& value, int bit, int set);
 
 HHOOK keyboardHook = 0; // 钩子句柄
 int holdingState = 0; //0x01 按下A, 0x02 按下L, 0x04 先按下A, 0x08 先按下L
-bool isClockwise = true; //单键输出下用不着 双键输出用于判断状态
-string bindKey = "ALL"; //前面为输入 后面为输出 0为留空
+bool isClockwise = true;
+string bindKey = "ALLL"; //前两为输入 后两为输出
 time_t timerOld = time(0);
 time_t timerNew = timerOld;
 
-//HHOOK SetWindowsHookEx(int idHook, HOOKPPROC lpfn, HINSTANCE hMod, DWORD dwThreadId); // 钩子安装(钩子类型,钩子过程的指针, 应用程序实例的曲柄, 要安装的钩子线程id)
+//HHOOK SetWindowsHookEx(int idHook, HOOKPROC lpfn, HINSTANCE hMod, DWORD dwThreadId); // 钩子安装(钩子类型,钩子过程的指针, 应用程序实例的曲柄, 要安装的钩子线程id)
 //LRESULT CALLBACK HookProc(int nCode, WPARAM wParam, LPARAM lParam); //钩子过程(钩子标识码 决定下一步操作, 依赖nCode参数的内容, 依赖nCode参数的内容)
 //UnhookWindowsHookEx(hhk: HHOOK {钩子曲柄}): BOOL; {True/False} //钩子卸载
 
@@ -96,7 +96,7 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 				isClockwise = !isClockwise; //同时按下则立即切换
 				Sleep(1);
 				press();
-				cout << "duplicate state, " << "'" << bindKey[1] << "'" << " earlier" << "\n";
+				cout << "[V] duplicate state, " << "'" << bindKey[1] << "'" << " earlier" << "\n";
 				setBit(holdingState, 0x08, 0);
 				setBit(holdingState, 0x04, 1);
 			}
@@ -118,7 +118,7 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 				isClockwise = !isClockwise;
 				Sleep(1);
 				press();
-				cout << "duplicate state, " << "'" << bindKey[0] << "'" << " earlier" << "\n";
+				cout << "[V] duplicate state, " << "'" << bindKey[0] << "'" << " earlier" << "\n";
 				setBit(holdingState, 0x04, 0);
 				setBit(holdingState, 0x08, 1);
 			}
@@ -143,7 +143,9 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 			if(not holdingState & 0x01)
 			{
 				release();
-				cout << "release" << "'" << bindKey[0] << "'" << "\n";
+#ifdef DEBUG
+				cout << "[V] release" << "'" << bindKey[0] << "'" << "\n";
+#endif
 				isClockwise = !isClockwise; //注意由于bool实际存储仍然为1Byte 即bool true为0x00000001 因此不可用位取反
 			}
 		}
@@ -154,8 +156,10 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 			if(not holdingState & 0x01)
 			{
 				release();
-				cout << "release" << "'" << bindKey[1] << "'" << "\n";
-				isClockwise = !isClockwise; //注意由于bool实际存储仍然为1Byte 即bool true为0x00000001 因此不可用位取反
+#ifdef DEBUG
+				cout << "[V] release" << "'" << bindKey[1] << "'" << "\n";
+#endif
+				isClockwise = !isClockwise;
 			}
 		//return 1;		// 使按键失效
 		}
@@ -183,10 +187,10 @@ void CALLBACK TimerProcA(HWND hWnd, UINT nMsg, UINT_PTR nTimerid, DWORD dwTime)
 
 int main(int argc, char* argv[])
 {
-	cout << "Another: Wufe8; Date: 2023-01-08; Version: 0.4" << "\n"
-	<< "Use two key to do as one single key" << "\n"
+	cout << "Another: Wufe8; Date: 2023-01-09; Version: 0.5" << "\n"
+	<< "Use two key to do as one single key, or trigger alternately without conflict" << "\n"
 	<< "Some app which run as admin. must run this program as admin first. Otherwise the hook cannot catch and do keyboard event" << "\n"
-	<< "To change bind key, edit 'bind.ini', first two char means input and third char means output. If invalid, try capital letters" << "\n"
+	<< "To change bind key, edit 'bind.ini', first two char means input and third fourth char means output(both can be same). If invalid, try capital letters" << "\n"
 	<< "--------------" << "\n";
 	// 读取按键配置
 	fstream cfgFile;
@@ -194,7 +198,7 @@ int main(int argc, char* argv[])
 	if (cfgFile.is_open())
 	{
 		cfgFile >> bindKey;
-		cout << "[I]'" << bindKey[0] << "'" << ", " << "'" << bindKey[1] << "'" << " represent " << "'" << bindKey[2] << "'" << "\n";
+		cout << "[I]'" << bindKey[0] << "', '" << bindKey[1] << "'" << " represent '" << bindKey[2] << "', '" << bindKey[3] << "'" << "\n";
 		
 	}
 	else
@@ -234,7 +238,7 @@ int main(int argc, char* argv[])
 	//cout << "&InputProc = " << Proc << endl;
 	keyboardHook = SetWindowsHookEx(
 		WH_KEYBOARD_LL,			// 钩子类型，WH_KEYBOARD_LL 为键盘钩子
-		(HOOKPROC)LowLevelKeyboardProc,	// 指向钩子函数的指针
+		(HOOKPROC)LowLevelKeyboardProc,	// 指向钩子函数的指针 1为单键输出 其余双键输出
 		hDll,	// Dll 句柄
 		//threadId); //要安装钩子的线程
 		//GetCurrentThreadId());
@@ -297,15 +301,16 @@ int main(int argc, char* argv[])
 			if(difftime(timerNew, timerOld) > 5) //一定时间无操作判断为脱钩 重新注册
 			{
 				timerOld = timerNew;
-				cout << "[I] 5s idle, try to reset hook" << endl;
+				cout << "[I] 5s idle, try to reset hook...";
 				UnhookWindowsHookEx(keyboardHook);
-				keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL,	(HOOKPROC)LowLevelKeyboardProc,	hDll, 0);
+				keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL,	(HOOKPROC)LowLevelKeyboardProc, hDll, 0);
 				if (keyboardHook == 0)
 				{
-					cout << "[E] Fail to reset hook (" << keyboardHook << ")" << "\n";
+					cout << "\n" << "[E] Fail to reset hook (" << keyboardHook << ")" << "\n";
 					system("pause");
 					return -1;
 				}
+				cout << "ok" << "\n";
 			}
 			timerNew = time(0);
 			Sleep(1);	//避免CPU全负载运行 约15ms精度
@@ -326,26 +331,31 @@ void press()
 	if(isClockwise == true)
 	{
 		keybd_event(bindKey[2],0,0,0);
+#ifdef DEBUG
+		cout << "[V] hit0" << "\n";
+#endif
 	}
 	else
 	{
-		keybd_event(bindKey[2],0,0,0);
+		keybd_event(bindKey[3],0,0,0);
+#ifdef DEBUG
+		cout << "[V] hit1" << "\n";
+#endif
 	}
-	cout << "hit" << "\n";
 }
 
 void release()
 {
-	keybd_event(bindKey[2],0,KEYEVENTF_KEYUP,0);
+	//keybd_event(bindKey[2],0,KEYEVENTF_KEYUP,0);
 	//keybd_event(bindKey[3],0,KEYEVENTF_KEYUP,0);
-	//if(isClockwise == true)
-	//{
-		//keybd_event(bind[2],0,KEYEVENTF_KEYUP,0);
-	//}
-	//else
-	//{
-		//keybd_event(bindKey[3],0,KEYEVENTF_KEYUP,0);
-	//}
+	if(isClockwise == true)
+	{
+		keybd_event(bindKey[2],0,KEYEVENTF_KEYUP,0);
+	}
+	else
+	{
+		keybd_event(bindKey[3],0,KEYEVENTF_KEYUP,0);
+	}
 }
 
 template<typename T>
@@ -360,7 +370,7 @@ void setBit(T& value, int bit, int set)
 		value = value & ~bit;
 	}
 #ifdef DEBUG
-	cout << value << "\n";
+	cout << "[V]" << value << "\n";
 #endif
 }
 
