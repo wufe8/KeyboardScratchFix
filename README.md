@@ -14,7 +14,7 @@ Tested to work on OSU! and ______
 1. Some app which run as admin. must run this program as admin first. Otherwise
 2. To change bind key, edit 'bind.ini' if not exist, create one. first two char means input and third chopen bind.ini.
 3. **Although it only uses the keyboard reading and writing of windows native api, it has no any effect on the game, but I'm not sure if it can be detected**
-4. 4. After testing, _____ may re-register the hook when switching interfaces or screens, causing the program to fail. Therefore, the function of automatically re-registering the hook with no operation for 5 seconds has been added. It cannot be disable temporarily, but there is no visible performance impact.(at least on my computer)
+4. After testing, _____ may re-register the hook when switching interfaces or screens, causing the program to fail. Therefore, the function of automatically re-registering the hook with no operation for 5 seconds has been added. It cannot be disable temporarily, but there is no visible performance impact.(at least on my computer)
 ---
 1. 需要管理员身份运行的应用程序 必须以管理员身份运行此程序 否则钩子抓不到键盘事件
 2. 关于修改按键: 创建'bind.ini' 里面前两个字母表示输入 第三个字母表示输出
