@@ -109,6 +109,7 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 		}
 		else if(ks->vkCode == bindKey[1])
 		{
+			timerOld = timerNew;
 			//cout << "Detect input: " << "L" << "\n";
 			setBit(holdingState, 0x02, 1);
 			if(holdingState & 0x04)
