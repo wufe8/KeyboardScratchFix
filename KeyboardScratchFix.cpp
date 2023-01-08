@@ -2,7 +2,7 @@
 #include <fstream>
 #include <ctime>
 
-
+//打包须添加'-static-libgcc -static-libstdc++'使用静态链接
 #pragma comment(lib, "winmm.lib") //mingw编译时务必添加'-lwinmm'参数
 #include <windows.h>
 #include "MMSystem.h"
@@ -26,19 +26,6 @@ time_t timerNew = timerOld;
 //HHOOK SetWindowsHookEx(int idHook, HOOKPROC lpfn, HINSTANCE hMod, DWORD dwThreadId); // 钩子安装(钩子类型,钩子过程的指针, 应用程序实例的曲柄, 要安装的钩子线程id)
 //LRESULT CALLBACK HookProc(int nCode, WPARAM wParam, LPARAM lParam); //钩子过程(钩子标识码 决定下一步操作, 依赖nCode参数的内容, 依赖nCode参数的内容)
 //UnhookWindowsHookEx(hhk: HHOOK {钩子曲柄}): BOOL; {True/False} //钩子卸载
-
-//int main(int argc, char* argv[])
-//{
-	//cout << "hello world!\n";	
-	//Sleep(1000);
-	//cout << "typing TEST\n";	
-	//keybd_event(84,0,0,0);
-	//Sleep(1000);
-	//cout << "release TEST\n";	
-	//keybd_event(84,0,0,1);
-	//system("pause");
-	//return 0;
-//}
 
 //代码改自: https://blog.51cto.com/wangningyu/3248216
 void MSleep(long lTime) //微秒级延时 单位1微秒(1000微秒=1毫秒)
@@ -105,7 +92,7 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 				setBit(holdingState, 0x04, 1);
 				press();
 			}
-			return 1;		// 使按键失效
+			return 1; // 使按键失效
 		}
 		else if(ks->vkCode == bindKey[1])
 		{
@@ -188,7 +175,7 @@ void CALLBACK TimerProcA(HWND hWnd, UINT nMsg, UINT_PTR nTimerid, DWORD dwTime)
 
 int main(int argc, char* argv[])
 {
-	cout << "Another: Wufe8; Date: 2023-01-09; Version: 0.5" << "\n"
+	cout << "Another: Wufe8; Date: 2023-01-09; Version: 0.5.1" << "\n"
 	<< "Use two key to do as one single key, or trigger alternately without conflict" << "\n"
 	<< "Some app which run as admin. must run this program as admin first. Otherwise the hook cannot catch and do keyboard event" << "\n"
 	<< "To change bind key, edit 'bind.ini', first two char means input and third fourth char means output(both can be same). If invalid, try capital letters" << "\n"
